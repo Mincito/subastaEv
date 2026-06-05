@@ -39,8 +39,12 @@ public class SubastaController {
 
     @PostMapping
     public ResponseEntity<Subasta> guardarSubasta(@Valid @RequestBody CreateSubastaRequest request) {
-        Subasta subasta =SubastaMapper.toModel(request);
+        Subasta subasta = SubastaMapper.toModel(request);
         Subasta subastaGuardada = subastaService.guardarSubasta(subasta);
+
+        if (subastaGuardada == null) {
+            return ResponseEntity.badRequest().build();
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(subastaGuardada);
     }

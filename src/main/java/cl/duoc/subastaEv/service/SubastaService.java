@@ -7,11 +7,17 @@ import org.springframework.stereotype.Service;
 
 import cl.duoc.subastaEv.model.Subasta;
 import cl.duoc.subastaEv.repository.SubastaRepository;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import cl.duoc.subastaEv.dto.LoteResponse;
 
 @Service
 public class SubastaService {
     @Autowired
     private SubastaRepository subastaRepository;
+    
+    @Autowired
+    private WebClient loteWebClient;
 
     public List <Subasta> getAllSubastas(){
         return subastaRepository.findAll();
@@ -29,10 +35,32 @@ public class SubastaService {
         return subastaRepository.findById(id).orElse(null);
     }
     public Subasta guardarSubasta(Subasta subasta) {
-    subasta.setEstado("ABIERTA");
-    if (subasta.getFechaInicio() == null) {
-        subasta.setFechaInicio(LocalDateTime.now());
-    }
+
+        try {
+            LoteResponse lote = loteWebClient.get()
+                    .uri("/{id}", subasta.getIdLote())
+                    .retrieve()
+                    .bodyToMono(LoteResponse.class)
+                    .block();
+
+            if (lote == null) {
+                return null;
+            }
+
+            if (!lote.estado().equalsIgnoreCase("DISPONIBLE")) {
+                return null;
+            }
+
+        } catch (WebClientResponseException.NotFound e) {
+            return null;
+        }
+
+        subasta.setEstado("ABIERTA");
+
+        if (subasta.getFechaInicio() == null) {
+            subasta.setFechaInicio(LocalDateTime.now());
+        }
+
         return subastaRepository.save(subasta);
     }
 
@@ -69,5 +97,9 @@ public class SubastaService {
     public int totalSubastas() {
         return subastaRepository.totalSubastas();
     }
+    
+
+    
+
     
 }
